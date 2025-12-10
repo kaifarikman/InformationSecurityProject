@@ -70,7 +70,6 @@ METHODS = [
     Method("lowercase", lambda s: s.lower()),
     Method("remove_spaces", lambda s: s.replace(" ", "")),
     Method("capitalize", lambda s: s.capitalize()),
-    Method("писька попка", lambda s: "хуй знает")
 ]
 METHODS_DICT = {method.name: method for method in METHODS}
 

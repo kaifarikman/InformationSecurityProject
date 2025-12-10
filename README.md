@@ -30,7 +30,7 @@
 ### 1. Клонируйте репозиторий (если нужно)
 
 ```bash
-git clone <ваш-репозиторий>
+git clone https://github.com/kaifarikman/InformationSecurityProject
 cd InformationSecurityProject
 ```
 

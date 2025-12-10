@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>String Processor</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="input-container">
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="linkInput" 
+                    class="link-input" 
+                    placeholder="Введите слово"
+                />
+                <button id="submitBtn" class="btn btn-primary">Отправить</button>
+            </div>
+        </div>
+        <div class="methods-menu">
+            <h3 class="methods-title">Выберите методы обработки:</h3>
+            <div id="methodsGrid" class="methods-grid"></div>
+        </div>
+
+        <div id="resultContainer" class="result-container hidden">
+            <div class="result-header">
+                <h3>Результаты</h3>
+            </div>
+            <div id="resultArea" class="result-area">
+            </div>
+        </div>
+
+        <div id="tryAgainContainer" class="try-again-container hidden">
+            <button id="tryAgainBtn" class="btn btn-secondary">Попробовать еще раз</button>
+        </div>
+    </div>
+
+    <script>
+        const submitBtn = document.getElementById('submitBtn');
+        const linkInput = document.getElementById('linkInput');
+        const resultArea = document.getElementById('resultArea');
+        const resultContainer = document.getElementById('resultContainer');
+        const tryAgainBtn = document.getElementById('tryAgainBtn');
+        const tryAgainContainer = document.getElementById('tryAgainContainer');
+        const methodsGrid = document.getElementById('methodsGrid');
+        const selectedMethods = new Set();
+        let methodButtons = [];
+        async function loadMethods() {
+            try {
+                const response = await fetch('/api/methods');
+                const data = await response.json();
+                methodsGrid.innerHTML = '';
+                data.methods.forEach(method => {
+                    const button = document.createElement('button');
+                    button.className = 'method-btn';
+                    button.setAttribute('data-method', method.id);
+                    button.textContent = method.name;
+                    button.addEventListener('click', () => {
+                        const methodId = button.dataset.method;
+                        
+                        if (selectedMethods.has(methodId)) {
+                            selectedMethods.delete(methodId);
+                            button.classList.remove('active');
+                        } else {
+                            selectedMethods.add(methodId);
+                            button.classList.add('active');
+                        }
+                    });
+                    
+                    methodsGrid.appendChild(button);
+                });
+                methodButtons = document.querySelectorAll('.method-btn');
+            } catch (error) {
+                console.error('Ошибка загрузки методов:', error);
+                methodsGrid.innerHTML = '<p style="color: #dc3545;">Ошибка загрузки методов</p>';
+            }
+        }
+        loadMethods();
+        submitBtn.addEventListener('click', async () => {
+            const link = linkInput.value.trim();
+            if (!link) {
+                alert('Пожалуйста, введите слово');
+                return;
+            }
+            if (selectedMethods.size === 0) {
+                alert('Пожалуйста, выберите хотя бы один метод обработки');
+                return;
+            }
+            resultContainer.classList.remove('hidden');
+            tryAgainContainer.classList.remove('hidden');
+            try {
+                const response = await fetch('/api/process-links', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        links: link,
+                        methods: Array.from(selectedMethods)
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    resultArea.innerHTML = `<div class="error-message">${data.message}</div>`;
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error-message">Ошибка: ${error.message}</div>`;
+            }
+        });
+        linkInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitBtn.click();
+            }
+        });
+        function displayResults(data) {
+            let html = '';
+            
+            if (data.results && data.results.length > 0) {
+                data.results.forEach(result => {
+                    html += `
+                        <div class="result-item">
+                            <div class="result-method-name">${result.method_name}</div>
+                            <div class="result-value">${result.result}</div>
+                        </div>
+                    `;
+                });
+            } else {
+                html = '<div class="result-placeholder">Нет результатов</div>';
+            }
+            
+            resultArea.innerHTML = html;
+        }
+        tryAgainBtn.addEventListener('click', () => {
+            linkInput.value = '';
+            selectedMethods.clear();
+            if (methodButtons.length > 0) {
+                methodButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                });
+            }
+            resultContainer.classList.add('hidden');
+            tryAgainContainer.classList.add('hidden');
+            linkInput.focus();
+        });
+    </script>
+</body>
+</html>
